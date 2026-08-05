@@ -1,0 +1,12 @@
+data_ingestion:
+  raw_data_path: data/external/HousingData.csv
+
+feature_engineering:
+  target_column: MEDV
+  test_size: 0.2
+  random_state: 42
+
+model_building:
+  n_estimators: 200
+  max_depth: null
+  random_state: 42

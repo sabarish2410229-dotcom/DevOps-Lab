@@ -1,0 +1,7 @@
+/model.pkl
+/metrics.json
+/data/raw
+/data/processed
+/data/features
+__pycache__/
+*.pyc
