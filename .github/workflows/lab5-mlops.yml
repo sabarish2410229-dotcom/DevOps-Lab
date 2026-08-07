@@ -1,0 +1,84 @@
+name: Lab 5 Boston Housing MLOps CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Lab 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: Lab 5/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest tests/ -v
+
+  train_and_evaluate:
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Lab 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: Lab 5/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Prepare data
+        run: python src/prepare.py
+      - name: Train models
+        run: python src/train.py
+      - name: Evaluate quality gate
+        run: python src/evaluate.py
+      - name: Upload model and metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab5-boston-housing-model-and-metrics
+          path: |
+            Lab 5/model/
+            Lab 5/metrics.json
+
+  deploy_to_huggingface:
+    needs: train_and_evaluate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Lab 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: Lab 5/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Prepare, train, and evaluate
+        run: |
+          python src/prepare.py
+          python src/train.py
+          python src/evaluate.py
+      - name: Upload model to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO_ID: ${{ vars.HF_REPO_ID }}
+        run: python src/register.py
